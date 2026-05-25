@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>住宅ローン シミュレーター</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: #080f18;
+  color: #e2eaf2;
+  min-height: 100vh;
+  padding: 28px 14px 48px;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* ヘッダー */
+.hdr-sub { color: #3b82f6; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 5px; }
+.hdr h1  { font-size: 22px; font-weight: 700; }
+.hdr p   { color: #5a7a96; font-size: 12px; margin-top: 5px; }
+
+/* カード */
+.card { background: #0d1926; border: 1px solid #1e2f40; border-radius: 12px; padding: 18px 18px; }
+.sec  { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #3b82f6; margin-bottom: 13px; font-weight: 600; }
+hr.div { border: none; border-top: 1px solid #1a2c3d; margin: 13px 0; }
+
+/* スライダー */
+.sl-block { margin-bottom: 13px; }
+.sl-block:last-child { margin-bottom: 0; }
+.sl-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.sl-row span:first-child { font-size: 13px; color: #8fa8c0; }
+.sl-val { font-family: 'Courier New', monospace; font-size: 14px; color: #38bdf8; font-weight: 500; }
+input[type=range] {
+  width: 100%; cursor: pointer; height: 4px;
+  -webkit-appearance: none; appearance: none;
+  background: #1a2c3d; border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: #3b82f6; cursor: pointer;
+}
+
+/* 繰上げ行 */
+.pr-row { border-radius: 10px; padding: 13px 14px; margin-bottom: 9px; transition: background .2s, border-color .2s; }
+.pr-row:last-child { margin-bottom: 0; }
+.pr-hdr { display: flex; align-items: center; gap: 9px; }
+.tog {
+  width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+  position: relative; transition: background .2s; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.tog-knob {
+  position: absolute; top: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; transition: left .2s;
+}
+.pr-title { font-size: 13px; font-weight: 500; }
+.pr-badge { margin-left: auto; font-family: 'Courier New', monospace; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+.pr-sliders { margin-top: 13px; display: flex; flex-direction: column; gap: 11px; }
+.pr-sl-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.pr-sl-row span:first-child { font-size: 12px; color: #7a9ab8; }
+
+/* 月額 */
+.monthly-center { text-align: center; padding: 6px 0 10px; }
+.lbl { color: #5a7a96; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px; }
+.monthly-val { font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #38bdf8; }
+.monthly-note { color: #5a7a96; font-size: 11px; margin-top: 4px; }
+.pr-sum-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #080f18; border-radius: 8px; padding: 9px 13px; margin-bottom: 7px;
+}
+.pr-sum-item:last-child { margin-bottom: 0; }
+
+/* 期間比較 */
+.term-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+.term-box { text-align: center; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-bottom: 7px; }
+.term-val { font-family: 'Courier New', monospace; font-size: 26px; margin: 2px 0; }
+.term-sub { color: #5a7a96; font-size: 11px; }
+.save-box { background: #051a0f; border: 1px solid #0d3d22; border-radius: 10px; padding: 11px 14px; text-align: center; }
+.save-box .sv { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: #34d399; }
+
+/* 比較表 */
+.cmp-hdr { display: flex; justify-content: space-between; padding: 5px 0 7px; border-bottom: 1px solid #1a2c3d; font-size: 11px; color: #3a5570; }
+.cmp-hdr .cols, .cmp-row .cols { display: flex; gap: 6px; }
+.cmp-hdr .cols span { min-width: 95px; text-align: right; }
+.cmp-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #131f2b; font-size: 12px; }
+.cmp-row:last-child { border-bottom: none; }
+.cmp-row .cols span { font-family: 'Courier New', monospace; font-size: 12px; min-width: 95px; text-align: right; }
+.int-save { background: #051a0f; border: 1px solid #0d3d22; border-radius: 10px; padding: 13px; text-align: center; margin-top: 13px; }
+.int-save .sv { font-family: 'Courier New', monospace; font-size: 26px; font-weight: 700; color: #34d399; }
+.int-save .sub { color: #5a7a96; font-size: 11px; margin-top: 3px; }
+
+/* グラフ */
+canvas#chart { width: 100% !important; display: block; }
+
+.footer { color: #2a4060; font-size: 10px; text-align: center; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <p class="hdr-sub">Housing Loan Simulator</p>
+    <h1>住宅ローン シミュレーション</h1>
+    <p>元利均等返済 ／ 期間短縮型繰上げ返済（最大3回）</p>
+  </div>
+
+  <!-- 基本条件 -->
+  <div class="card">
+    <p class="sec">ローン基本条件</p>
+    <div class="sl-block">
+      <div class="sl-row"><span>借入金額</span><span class="sl-val" id="d-loan">9,000万円</span></div>
+      <input type="range" id="s-loan" min="500" max="20000" step="100" value="9000">
+    </div>
+    <div class="sl-block">
+      <div class="sl-row"><span>金利（年利）</span><span class="sl-val" id="d-rate">1.0%</span></div>
+      <input type="range" id="s-rate" min="0.1" max="5" step="0.1" value="1.0">
+    </div>
+    <div class="sl-block">
+      <div class="sl-row"><span>返済期間</span><span class="sl-val" id="d-term">35年</span></div>
+      <input type="range" id="s-term" min="5" max="50" step="1" value="35">
+    </div>
+  </div>
+
+  <!-- 繰上げ設定 -->
+  <div class="card">
+    <p class="sec">繰上げ返済設定</p>
+    <div id="pr-rows"></div>
+  </div>
+
+  <!-- 月額 -->
+  <div class="card">
+    <p class="sec">月々の返済額</p>
+    <div class="monthly-center">
+      <p class="lbl">元利均等 毎月返済額</p>
+      <p class="monthly-val" id="r-monthly">---</p>
+      <p class="monthly-note">期間短縮型のため繰上げ後も月払い額は変わりません</p>
+    </div>
+    <div id="pr-summary"></div>
+  </div>
+
+  <!-- 期間比較 -->
+  <div class="card">
+    <p class="sec">返済期間 比較</p>
+    <div class="term-grid">
+      <div class="term-box">
+        <span class="badge" style="background:#1e3a5f;color:#60a5fa">繰上げなし</span>
+        <p class="term-val" style="color:#94a3b8" id="r-term-base">--年</p>
+        <p class="term-sub" id="r-term-base-m">--ヶ月</p>
+      </div>
+      <div class="term-box">
+        <span class="badge" style="background:#083d2a;color:#34d399">繰上げあり</span>
+        <p class="term-val" style="color:#34d399" id="r-term-pre">--年</p>
+        <p class="term-sub" id="r-term-pre-m">--ヶ月</p>
+      </div>
+    </div>
+    <div class="save-box">
+      <span style="color:#5a7a96;font-size:12px">短縮期間　</span>
+      <span class="sv" id="r-saved-m">--</span>
+    </div>
+  </div>
+
+  <!-- 総額比較 -->
+  <div class="card">
+    <p class="sec">支払い総額 比較</p>
+    <div class="cmp-hdr">
+      <span>項目</span>
+      <div class="cols"><span>繰上げなし</span><span>繰上げあり</span></div>
+    </div>
+    <div class="cmp-row">
+      <span style="color:#8fa8c0">借入元金</span>
+      <div class="cols">
+        <span style="color:#8fa8c0" id="c-prin-b">--</span>
+        <span style="color:#8fa8c0" id="c-prin-p">--</span>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <span style="color:#8fa8c0">繰上げ返済額合計</span>
+      <div class="cols">
+        <span style="color:#8fa8c0">0円</span>
+        <span style="color:#8fa8c0" id="c-prepay-total">--</span>
+      </div>
+    </div>
+    <div class="cmp-row">
+      <span style="color:#8fa8c0">支払利息</span>
+      <div class="cols">
+        <span style="color:#f87171" id="c-int-b">--</span>
+        <span style="color:#34d399" id="c-int-p">--</span>
+      </div>
+    </div>
+    <div class="cmp-row" style="font-weight:700">
+      <span>支払総額</span>
+      <div class="cols">
+        <span style="color:#f87171" id="c-tot-b">--</span>
+        <span style="color:#34d399" id="c-tot-p">--</span>
+      </div>
+    </div>
+    <div class="int-save">
+      <p class="lbl">利息の節約額</p>
+      <p class="sv" id="r-saved-int">---</p>
+      <p class="sub" id="r-saved-int-m"></p>
+    </div>
+  </div>
+
+  <!-- グラフ -->
+  <div class="card">
+    <p class="sec">残高推移グラフ（年次）</p>
+    <canvas id="chart" height="220"></canvas>
+  </div>
+
+  <p class="footer">
+    ※ 元利均等返済方式で試算。変動金利は考慮していません。<br>
+    繰上げ返済手数料・団信保険料等は含まれていません。
+  </p>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  定数・状態
+// ═══════════════════════════════════════════════
+const PC = ['#fbbf24','#a78bfa','#fb923c'];
+const S = {
+  loan: 9000, rate: 1.0, term: 35,
+  prepays: [
+    { on: true,  year: 1,  amt: 3000 },
+    { on: false, year: 5,  amt: 1000 },
+    { on: false, year: 10, amt: 1000 },
+  ]
+};
+
+// ═══════════════════════════════════════════════
+//  計算
+// ═══════════════════════════════════════════════
+function calcMonthly(p, r, n) {
+  const m = r / 12;
+  if (m === 0) return p / n;
+  return p * m * Math.pow(1+m,n) / (Math.pow(1+m,n) - 1);
+}
+function runSched(p, r, pay, maxM) {
+  const m = r / 12; let bal = p; const rows = [];
+  for (let i = 1; i <= maxM && bal > 0.5; i++) {
+    const int = bal * m;
+    const pmt = Math.min(pay, bal + int);
+    bal = Math.max(0, bal - (pmt - int));
+    rows.push({ month: i, payment: pmt, balance: bal });
+  }
+  return rows;
+}
+function simulate(loan, rate, termY, prepays) {
+  const termM = termY * 12;
+  const monthly = calcMonthly(loan, rate, termM);
+  const baseRows = runSched(loan, rate, monthly, termM);
+
+  let allRows = [], curBal = loan, offset = 0, totalPre = 0;
+  const vp = [...prepays].sort((a,b) => a.month - b.month);
+
+  for (let i = 0; i <= vp.length; i++) {
+    const np = vp[i];
+    const phEnd = np ? np.month - offset : termM * 2;
+    const ph = runSched(curBal, rate, monthly, phEnd);
+    allRows = allRows.concat(ph.map(r => ({...r, month: r.month + offset})));
+    if (!np || ph.length === 0) break;
+    const balNow = ph[ph.length-1].balance;
+    if (np.amount >= balNow) { totalPre += balNow; break; }
+    curBal = balNow - np.amount;
+    totalPre += np.amount;
+    offset += ph.length;
+  }
+
+  const actM = allRows.length ? allRows[allRows.length-1].month : 0;
+  const totBase = baseRows.reduce((s,r) => s+r.payment, 0);
+  const totPre  = allRows.reduce((s,r) => s+r.payment, 0) + totalPre;
+  const intBase = totBase - loan;
+  const intPre  = totPre  - loan;
+  const savedM  = baseRows.length - actM;
+
+  const chart = [];
+  for (let y = 1; y <= termY; y++) {
+    const m = y * 12;
+    const br = baseRows[Math.min(m, baseRows.length)-1];
+    const pr = allRows[Math.min(m, allRows.length)-1];
+    chart.push({ year: y, base: br ? Math.round(br.balance/10000) : 0, pre: pr ? Math.round(pr.balance/10000) : 0 });
+  }
+
+  return {
+    monthly, totBase, totPre, intBase, intPre, totalPre,
+    savedInt: intBase - intPre, savedM, actM,
+    actY: Math.floor(actM/12), actMod: actM % 12, chart,
+  };
+}
+
+// ═══════════════════════════════════════════════
+//  フォーマット
+// ═══════════════════════════════════════════════
+const fmt  = n => Math.round(n).toLocaleString('ja-JP') + '円';
+const fmtM = n => (n/10000).toFixed(1) + '万円';
+
+// ═══════════════════════════════════════════════
+//  Canvas グラフ描画
+// ═══════════════════════════════════════════════
+function drawChart(data, preYears) {
+  const canvas = document.getElementById('chart');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 36;
+  const H = 220;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const PAD = { t: 12, r: 10, b: 36, l: 52 };
+  const gW = W - PAD.l - PAD.r;
+  const gH = H - PAD.t - PAD.b;
+
+  const maxVal = Math.max(...data.map(d => d.base), 1);
+  const step = niceStep(maxVal);
+  const yMax = Math.ceil(maxVal / step) * step;
+
+  // 背景
+  ctx.fillStyle = '#0d1926';
+  ctx.fillRect(0, 0, W, H);
+
+  // グリッド・Y軸ラベル
+  ctx.strokeStyle = '#1a2c3d';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#5a7a96';
+  ctx.font = `10px -apple-system, sans-serif`;
+  ctx.textAlign = 'right';
+  for (let v = 0; v <= yMax; v += step) {
+    const y = PAD.t + gH - (v / yMax) * gH;
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + gW, y); ctx.stroke();
+    ctx.fillText(v + '万', PAD.l - 4, y + 3);
+  }
+
+  // X軸ラベル（5年ごと）
+  ctx.textAlign = 'center';
+  const xTick = data.length <= 20 ? 5 : 10;
+  data.forEach((d, i) => {
+    if (d.year % xTick === 0 || d.year === 1) {
+      const x = PAD.l + (i / (data.length - 1)) * gW;
+      ctx.fillStyle = '#5a7a96';
+      ctx.fillText(d.year + '年', x, H - 6);
+    }
+  });
+
+  // 繰上げ縦線
+  preYears.forEach((y, pi) => {
+    const idx = data.findIndex(d => d.year === y);
+    if (idx < 0) return;
+    const x = PAD.l + (idx / (data.length - 1)) * gW;
+    ctx.strokeStyle = PC[pi];
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, PAD.t + gH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = PC[pi];
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('第' + (pi+1) + '回', x, PAD.t + 10);
+  });
+
+  // エリア塗り・線（通常残高）
+  drawArea(ctx, data, 'base', yMax, PAD, gW, gH, '#f87171', 'rgba(248,113,113,0.15)');
+  // エリア塗り・線（繰上後残高）
+  drawArea(ctx, data, 'pre',  yMax, PAD, gW, gH, '#34d399', 'rgba(52,211,153,0.18)');
+
+  // 凡例
+  [['通常残高','#f87171'],['繰上後残高','#34d399']].forEach(([label, color], i) => {
+    const lx = PAD.l + i * 90;
+    const ly = H - 36 + 18;
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, ly - 7, 16, 4);
+    ctx.fillStyle = '#8fa8c0';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, lx + 20, ly - 3);
+  });
+}
+
+function drawArea(ctx, data, key, yMax, PAD, gW, gH, stroke, fill) {
+  const pts = data.map((d, i) => ({
+    x: PAD.l + (i / (data.length - 1)) * gW,
+    y: PAD.t + gH - (d[key] / yMax) * gH,
+  }));
+  // fill
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, PAD.t + gH);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, PAD.t + gH);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  // line
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.stroke();
+}
+
+function niceStep(max) {
+  const rough = max / 5;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const candidates = [1,2,5,10].map(v => v * pow);
+  return candidates.find(c => c >= rough) || candidates[candidates.length-1];
+}
+
+// ═══════════════════════════════════════════════
+//  繰上げ行レンダリング
+// ═══════════════════════════════════════════════
+function renderPrepayRows() {
+  const c = document.getElementById('pr-rows');
+  c.innerHTML = '';
+  S.prepays.forEach((p, i) => {
+    const col = PC[i];
+    const div = document.createElement('div');
+    div.className = 'pr-row';
+    div.style.background = p.on ? '#0a1e2e' : '#080f18';
+    div.style.border = `1px solid ${p.on ? col+'55' : '#1a2c3d'}`;
+    div.style.marginBottom = i < 2 ? '9px' : '0';
+    div.innerHTML = `
+      <div class="pr-hdr">
+        <button class="tog" data-i="${i}" style="background:${p.on ? col : '#1a2c3d'}">
+          <span class="tog-knob" style="left:${p.on ? '18px':'2px'}"></span>
+        </button>
+        <span class="pr-title" style="color:${p.on?'#e2eaf2':'#3a5570'}">第${i+1}回 繰上げ返済</span>
+        ${p.on ? `<span class="pr-badge" style="color:${col};background:${col}22">${p.year}年後 / ${p.amt.toLocaleString()}万円</span>` : ''}
+      </div>
+      ${p.on ? `
+      <div class="pr-sliders">
+        <div>
+          <div class="pr-sl-row">
+            <span>繰上げタイミング</span>
+            <span style="font-family:'Courier New',monospace;font-size:12px;color:${col}">${p.year}年後</span>
+          </div>
+          <input type="range" data-i="${i}" data-k="year" min="1" max="${S.term-1}" step="1" value="${p.year}" style="accent-color:${col};width:100%">
+        </div>
+        <div>
+          <div class="pr-sl-row">
+            <span>繰上げ返済額</span>
+            <span style="font-family:'Courier New',monospace;font-size:12px;color:${col}">${p.amt.toLocaleString()}万円</span>
+          </div>
+          <input type="range" data-i="${i}" data-k="amt" min="100" max="${Math.round(S.loan*.9/100)*100}" step="100" value="${p.amt}" style="accent-color:${col};width:100%">
+        </div>
+      </div>` : ''}
+    `;
+    c.appendChild(div);
+  });
+
+  c.querySelectorAll('.tog').forEach(b => b.addEventListener('click', () => {
+    S.prepays[+b.dataset.i].on = !S.prepays[+b.dataset.i].on;
+    renderPrepayRows(); updateAll();
+  }));
+  c.querySelectorAll('input[type=range]').forEach(sl => sl.addEventListener('input', () => {
+    S.prepays[+sl.dataset.i][sl.dataset.k] = +sl.value;
+    renderPrepayRows(); updateAll();
+  }));
+}
+
+// ═══════════════════════════════════════════════
+//  結果反映
+// ═══════════════════════════════════════════════
+function updateAll() {
+  const principal = S.loan * 10000;
+  const prepays = S.prepays.filter(p => p.on).map(p => ({ month: p.year*12, amount: p.amt*10000 }));
+  const r = simulate(principal, S.rate/100, S.term, prepays);
+
+  document.getElementById('r-monthly').textContent = fmt(r.monthly);
+
+  const en = S.prepays.filter(p => p.on);
+  const sumEl = document.getElementById('pr-summary');
+  if (en.length) {
+    sumEl.innerHTML = '<hr class="div">' + en.map((p,i) => {
+      const col = PC[S.prepays.indexOf(p)];
+      return `<div class="pr-sum-item" style="border:1px solid ${col}33">
+        <span style="font-size:12px;color:#7a9ab8">第${i+1}回 繰上げ（${p.year}年後）</span>
+        <span style="font-family:'Courier New',monospace;font-size:13px;color:${col}">${p.amt.toLocaleString()}万円</span>
+      </div>`;
+    }).join('');
+  } else {
+    sumEl.innerHTML = '';
+  }
+
+  document.getElementById('r-term-base').textContent   = S.term + '年';
+  document.getElementById('r-term-base-m').textContent = (S.term*12) + 'ヶ月';
+  document.getElementById('r-term-pre').textContent    = r.actY + '年' + (r.actMod ? r.actMod+'ヶ月' : '');
+  document.getElementById('r-term-pre-m').textContent  = r.actM + 'ヶ月';
+
+  const sy = Math.floor(r.savedM/12), sm = r.savedM%12;
+  document.getElementById('r-saved-m').textContent = `${sy}年${sm?sm+'ヶ月':''}（${r.savedM}ヶ月）短縮`;
+
+  document.getElementById('c-prin-b').textContent       = fmt(S.loan*10000);
+  document.getElementById('c-prin-p').textContent       = fmt(S.loan*10000);
+  document.getElementById('c-prepay-total').textContent = fmt(r.totalPre);
+  document.getElementById('c-int-b').textContent        = fmt(r.intBase);
+  document.getElementById('c-int-p').textContent        = fmt(r.intPre);
+  document.getElementById('c-tot-b').textContent        = fmt(r.totBase);
+  document.getElementById('c-tot-p').textContent        = fmt(r.totPre);
+  document.getElementById('r-saved-int').textContent    = fmt(r.savedInt);
+  document.getElementById('r-saved-int-m').textContent  = fmtM(r.savedInt) + ' の利息を節約';
+
+  drawChart(r.chart, en.map(p => p.year));
+}
+
+// ═══════════════════════════════════════════════
+//  基本スライダーのイベント
+// ═══════════════════════════════════════════════
+document.getElementById('s-loan').addEventListener('input', e => {
+  S.loan = +e.target.value;
+  document.getElementById('d-loan').textContent = S.loan.toLocaleString('ja-JP') + '万円';
+  renderPrepayRows(); updateAll();
+});
+document.getElementById('s-rate').addEventListener('input', e => {
+  S.rate = +e.target.value;
+  document.getElementById('d-rate').textContent = S.rate.toFixed(1) + '%';
+  updateAll();
+});
+document.getElementById('s-term').addEventListener('input', e => {
+  S.term = +e.target.value;
+  document.getElementById('d-term').textContent = S.term + '年';
+  renderPrepayRows(); updateAll();
+});
+
+// リサイズ時にグラフ再描画
+window.addEventListener('resize', updateAll);
+
+// ─── 初期化 ───────────────────────────────────
+renderPrepayRows();
+updateAll();
+</script>
+</body>
+</html>
